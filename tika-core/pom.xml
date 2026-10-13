@@ -123,6 +123,47 @@
 
   <build>
     <plugins>
+          <!-- Analyse des mutations avec PIT -->
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>1.22.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>1.2.3</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <targetClasses>
+            <param>org.apache.tika.metadata.Metadata</param>
+          </targetClasses>
+          <targetTests>
+            <param>org.apache.tika.metadata.TestMetadata</param>
+            <param>org.apache.tika.metadata.MetadataHashCodeGeneratedTest</param>
+          </targetTests>
+          <threads>2</threads>
+        </configuration>
+      </plugin>
+
+      <!-- Generation de tests avec ChatUniTest et Ollama -->
+      <plugin>
+        <groupId>io.github.ZJU-ACES-ISE</groupId>
+        <artifactId>chatunitest-maven-plugin</artifactId>
+        <version>1.4.1</version>
+        <configuration>
+          <apiKeys>ollama</apiKeys>
+          <model>qwen2.5-coder:3b</model>
+          <url>http://127.0.0.1:11434/v1/chat/completions</url>
+          <testNumber>2</testNumber>
+          <maxRounds>2</maxRounds>
+          <thread>false</thread>
+          <maxThread>1</maxThread>
+          <selectClass>org.apache.tika.metadata.Metadata</selectClass>
+          <testOutput>${project.build.directory}/chatunitest-generated</testOutput>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
