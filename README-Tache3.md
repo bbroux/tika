@@ -1,0 +1,7 @@
+## Tache 3
+
+# 1. Ajout d'une Github action pour la vérification automatique de Semgrep 
+
+    J'ai commencé par me rendre au répertoire GitHub de mon projet tika que j'ai fork pour la tâche 2. Ensuite, dans la section "Actions" j'ai voulu ajouter l'action. J'ai recherché Semgrep, et c'était déjà reconnu par Github. Cependant, ils m'ont généré un fichier de configuration automatique qui mentionnait qu'il fallait avoir un compte Semgrep gratuit (ce que je n'avais pas). J'ai été sur le site de Semgrep, je me suis crée un compte gratuit (avec mes identifiants Github), et j'ai ensuite ajouté mon répertoire Github dans mes projets sur le site de Semgrep. C'était assez simple, et immédiatemment j'ai pu ajouter le github action avec un fichier de configuration fourni par Semgrep lui même. J'ai préféré ne mettre aucun run "scheduled", je veux faire les vérifications seulement lors d'un pull request. Le commit s'est fait directement, c'était très facile et je n'ai pas eu de problèmes. L'action a été exécutée sur le répertoire sans modifications (donc le répertoire après la tâche 2). Ceci était automatique quand l'ajout de l'action a été "commit". Il n'y a eu aucune erreur détectée par Semgrep. 
+
+# 2. 
