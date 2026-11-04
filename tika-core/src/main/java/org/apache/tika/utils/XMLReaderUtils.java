@@ -178,6 +178,7 @@ public class XMLReaderUtils implements Serializable {
         XMLReader reader;
         try {
             reader = getSAXParser().getXMLReader();
+            //reader.parse(new InputStream(), new DefaultHandler()) - modification 1, essai 1 
         } catch (SAXException e) {
             throw new TikaException("Unable to create an XMLReader", e);
         }
@@ -228,13 +229,13 @@ public class XMLReaderUtils implements Serializable {
         }
         factory.setNamespaceAware(true);
         factory.setValidating(false);
-        trySetSAXFeature(factory, XMLConstants.FEATURE_SECURE_PROCESSING, true);
-        trySetSAXFeature(factory, "http://xml.org/sax/features/external-general-entities", false);
-        trySetSAXFeature(factory, "http://xml.org/sax/features/external-parameter-entities", false);
-        trySetSAXFeature(factory, "http://apache.org/xml/features/nonvalidating/load-external-dtd",
-                false);
-        trySetSAXFeature(factory, "http://apache.org/xml/features/nonvalidating/load-dtd-grammar",
-                false);
+        //trySetSAXFeature(factory, XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        //trySetSAXFeature(factory, "http://xml.org/sax/features/external-general-entities", false);
+        //trySetSAXFeature(factory, "http://xml.org/sax/features/external-parameter-entities", false);
+        //trySetSAXFeature(factory, "http://apache.org/xml/features/nonvalidating/load-external-dtd",
+          //      false);
+        //trySetSAXFeature(factory, "http://apache.org/xml/features/nonvalidating/load-dtd-grammar",
+            //    false);
 
         return factory;
     }
