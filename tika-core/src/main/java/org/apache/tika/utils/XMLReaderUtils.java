@@ -178,6 +178,7 @@ public class XMLReaderUtils implements Serializable {
         XMLReader reader;
         try {
             reader = getSAXParser().getXMLReader();
+            reader.parse(new InputStream(), new DefaultHandler())
         } catch (SAXException e) {
             throw new TikaException("Unable to create an XMLReader", e);
         }
