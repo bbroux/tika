@@ -6,10 +6,13 @@
 
 # 2. Ajout de vulnérabilités reconnaissables par Semgrep
 
-    Dans la documentation de Semgrep, je me suis rendue au "Registry", qui nomme les règles de base utilisées pour l'analyse de Semgrep (il existe aussi la possibilité de définir ses propres règles). On a un total de 241 règles pour le langage Java, et plusieurs autres langages ont leurs règles de base déterminées par Semgrep. Voici les types de règles sélectionnées pour tester le fonctionnement de Semgrep face aux vulnérabilités détectées. Pour que mes résultats soient lisibles, j'ai décidé de faire mes changements dans le module tika-serializer, car aucun problème n'avait été relevé dans le scan initial avant les modifications. Je vais ajouter des erreurs de type "critical", car mon policy pour Semgrep est d'échouer si on a des erreurs critiques détectées. J'ai configuré ceci dans le Semgrep cloud. 
+    Dans la documentation de Semgrep, je me suis rendue au "Registry", qui nomme les règles de base utilisées pour l'analyse de Semgrep (il existe aussi la possibilité de définir ses propres règles). On a un total de 241 règles pour le langage Java, et plusieurs autres langages ont leurs règles de base déterminées par Semgrep. Voici les types de règles sélectionnées pour tester le fonctionnement de Semgrep face aux vulnérabilités détectées. Pour que mes résultats soient lisibles, j'ai décidé de faire mes changements dans le module tika-serializer, car aucun problème n'avait été relevé dans le scan initial avant les modifications. Je vais ajouter des erreurs de type "critical" ou "high", car mon policy pour Semgrep est d'échouer si on a des erreurs critiques ou importantes détectées. J'ai configuré ceci dans le Semgrep cloud. 
 
-    1. Concaténation de l'entrée utilisateur dans une requête SQL
-        url de la règle : https://semgrep.dev/r?q=java.lang.security.audit.formatted-sql-string-deepsemgrep.formatted-sql-string-deepsemgrep
+    1. Utilisation d'un SaxParser sans l'option de sécurité
+        url de la règle : https://semgrep.dev/r?q=java.lang.security.xxe.saxparserfactory-xxe.saxparserfactory-xxe
 
-        Ajoutée dans la 
+        Essai 1 (PR#5 - add v1) : Ajouter une modification dans tika-core/main/src/java/XMLReaderUtils.java       
+        Cette modification n'a pas mené à une nouvelle détection par Semgrep, car je n'ai pas changé les configurations du parser du tout.
+        
+        Essai 2 (PR#6 - add v1-try2) : Ajouter une modification dans tika-core/main/src/java/XMLReaderUtils.java dans la fonction getSaxParserFactory(). Je retire les features de sécurité recommandés selon la doc semgrep.  
 
