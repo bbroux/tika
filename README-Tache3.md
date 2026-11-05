@@ -6,13 +6,25 @@
 
 # 2. Ajout de vulnérabilités reconnaissables par Semgrep
 
-    Dans la documentation de Semgrep, je me suis rendue au "Registry", qui nomme les règles de base utilisées pour l'analyse de Semgrep (il existe aussi la possibilité de définir ses propres règles). On a un total de 241 règles pour le langage Java, et plusieurs autres langages ont leurs règles de base déterminées par Semgrep. Voici les types de règles sélectionnées pour tester le fonctionnement de Semgrep face aux vulnérabilités détectées. Pour que mes résultats soient lisibles, j'ai décidé de faire mes changements dans le module tika-serializer, car aucun problème n'avait été relevé dans le scan initial avant les modifications. Je vais ajouter des erreurs de type "critical" ou "high", car mon policy pour Semgrep est d'échouer si on a des erreurs critiques ou importantes détectées. J'ai configuré ceci dans le Semgrep cloud. 
+    Dans la documentation de Semgrep, je me suis rendue au "Registry", qui nomme les règles de base utilisées pour l'analyse de Semgrep (il existe aussi la possibilité de définir ses propres règles). On a un total de 241 règles pour le langage Java, et plusieurs autres langages ont leurs règles de base déterminées par Semgrep. Voici les types de règles sélectionnées pour tester le fonctionnement de Semgrep face aux vulnérabilités détectées. Je vais ajouter des erreurs de type "critical" ou "high", car mon policy pour Semgrep est d'échouer si on a des erreurs critiques ou importantes détectées. J'ai configuré ceci dans le Semgrep cloud. 
 
-    1. Utilisation d'un SaxParser sans l'option de sécurité
+    1. Utilisation d'un SaxParser sans les options de sécurité
         url de la règle : https://semgrep.dev/r?q=java.lang.security.xxe.saxparserfactory-xxe.saxparserfactory-xxe
 
         Essai 1 (PR#5 - add v1) : Ajouter une modification dans tika-core/main/src/java/XMLReaderUtils.java       
-        Cette modification n'a pas mené à une nouvelle détection par Semgrep, car je n'ai pas changé les configurations du parser du tout.
-        
-        Essai 2 (PR#6 - add v1-try2) : Ajouter une modification dans tika-core/main/src/java/XMLReaderUtils.java dans la fonction getSaxParserFactory(). Je retire les features de sécurité recommandés selon la doc semgrep.  
+        -> Résultat : Cette modification n'a pas mené à une nouvelle détection par Semgrep, car je n'ai pas changé les configurations du parser du tout.
 
+        Essai 2 (PR#5 - add v1-try2) : Ajouter une modification dans tika-core/main/src/java/XMLReaderUtils.java dans la fonction getSaxParserFactory(). Je retire les features de sécurité recommandés selon la doc semgrep. 
+        -> Résultat: La modification ne fonctionne toujours pas, les erreurs étaient présentes et flaggées, mais ne brisaient pas le build avant car la policy semgrep n'était pas bloquante. Maintenant, avec l'ajout de la policy, ces erreurs sont toujours détectées et deviennent blocantes, mais ce n'est pas à cause de la modification dans le code, mais à cause de celle dans la configuration de semgrep. 
+
+        Il est difficile de trouver une modification qui causerait un problème et de l'ajouter, car la plupart sont dépendantes de certaines technologies que le projet tika n'utilise pas (ex. SQL). Je vais donc élargir mes recherches à toutes les erreurs possibles  et je vais indiquer de briser le build, c'est-à-dire qu'on inclut les vulnérabilités "high risk" et "critical" mais aussi les plus minimes comme "info" et "error". Je vais changer ceci dans la configuration semgrep en ligne. Par contre, c'est à noter que les vulnérabilités qui étaient présentes au début, lorsqu'on a ajouté semgrep, seront toutes flaggées. On en avait 98 de détectées, aucune "blocking". Maintenant qu'on élargit, nos 98 vulnérabilités détectées dans le code seront "blocking". On cherche une run qui détectera plus que 98 erreurs, signalant une nouvelle détection par semgrep qu'on avait pas vue avant. 
+
+        J'ai continué à chercher, mais il est compliqué d'intégrer une nouvelle vulnérabilité qui concorde avec le code existant. Oui, il y a plusieurs règles Semgrep utilisées en Java, mais lorsque je recherche dans le répertoire du projet, les règles ne sont pas applicables (technologie pas utilisée, et il faut modifier du code existant et non en ajouter). Sinon, les règles qui seraient applicables sont déjà détectées par Semgrep et l'étaient lorsqu'on a fait le premier run de Semgrep à son initialisation dans les github actions. Le seul changement que je pense qui pourrait faire réagir Semgrep c'est l'ajout d'une dépendance vulnérable. On passe à l'ajout de la vulnérabilité 2 (ajout d'une dépendance)
+    
+    2. Ajout d'une dépendance qui a une vulnérabilité connue dans tika-core
+
+        Selon mes recherhes, la version 1.9 de commons-text comprend des vulnérabilités importantes et est flaggée comme tel. On va l'ajouter dans le graph maven de tika-core (en ajoutant dans tika-core/pom.xml), et vérifier si le tout est détecté par Semgrep lorsqu'on fait un push. 
+
+
+    
+        
