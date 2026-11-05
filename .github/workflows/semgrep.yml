@@ -23,4 +23,4 @@ jobs:
       image: semgrep/semgrep
     steps:
     - uses: actions/checkout@v6
-    - run: semgrep ci --allow-local-build
+    - run: semgrep ci --allow-local-builds
