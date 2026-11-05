@@ -23,7 +23,11 @@
     
     2. Ajout d'une dépendance qui a une vulnérabilité connue dans tika-core
 
-        Selon mes recherhes, la version 1.9 de commons-text comprend des vulnérabilités importantes et est flaggée comme tel. On va l'ajouter dans le graph maven de tika-core (en ajoutant dans tika-core/pom.xml), et vérifier si le tout est détecté par Semgrep lorsqu'on fait un push. 
+        Selon mes recherches, la version 1.9 de commons-text comprend des vulnérabilités importantes et est flaggée comme tel. On va l'ajouter dans le graph maven de tika-core (en ajoutant dans tika-core/pom.xml), et vérifier si le tout est détecté par Semgrep lorsqu'on fait un push. 
+
+        https://commons.apache.org/proper/commons-text/security.html
+
+        Je l'ai fait, mais le build de tika ne fonctionne plus car il y a un problème de résolution des dépendances. Une autre dépendance crée la dépendance transitive de commons-text 1.11, donc il y a un conflit de version avec le commons-text 1.9 qu'on a tenté d'ajouter pour soulever une vulnérabilité. Je l'ai donc retirée pour que le build fonctionne. 
 
 
     
