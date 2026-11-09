@@ -94,6 +94,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.shiro</groupId>
+      <artifactId>shiro-core</artifactId>
+      <version>1.8.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.martensigwart</groupId>
       <artifactId>fakeload</artifactId>
       <version>${fakeload.version}</version>

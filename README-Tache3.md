@@ -29,6 +29,8 @@
 
         Je l'ai fait, mais le build de tika ne fonctionne plus car il y a un problème de résolution des dépendances. Une autre dépendance crée la dépendance transitive de commons-text 1.11, donc il y a un conflit de version avec le commons-text 1.9 qu'on a tenté d'ajouter pour soulever une vulnérabilité. Je l'ai donc retirée pour que le build fonctionne. 
 
+        Pour quand même tenter ma chance et voir si cette vulnérabilité serait reconnue par Semgrep, j'ai mit la dépendance vulnérable apache.shiro.shiro-core version 1.8.0. Par contre, malgré plusieurs tentatives Semgrep ne reconnait pas les dépendances du projet, donc il ne reconnait pas le problème. 
+
 
     
         
