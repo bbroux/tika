@@ -34,3 +34,196 @@
 
     
         
+
+# 3. Solution finale et validation
+
+## 3.1 Configuration finale de Semgrep dans GitHub Actions
+
+Après les premières expérimentations avec Semgrep Cloud, nous avons choisi de mettre en place une comparaison explicite entre les vulnérabilités présentes avant et après les modifications.
+
+Le workflow `.github/workflows/semgrep.yml` est déclenché lors des pull requests, des pushs vers `main` ou `master`, ainsi que manuellement.
+
+Il utilise l'image Docker `semgrep/semgrep:1.185.0` et exécute les étapes suivantes :
+
+1. Récupération du dépôt Git avec son historique complet (`fetch-depth: 0`).
+2. Configuration de `safe.directory` afin d'autoriser les commandes Git dans le conteneur.
+3. Détermination du commit de référence selon le type d'événement GitHub.
+4. Analyse du code actuel avec `semgrep scan --config auto`.
+5. Analyse du commit de référence dans un répertoire Git temporaire.
+6. Comparaison des résultats avec `scripts/compare_semgrep.py`.
+
+Le script compare les occurrences d'alertes en fonction de leur règle Semgrep et de leur fichier. Il tient compte du nombre d'occurrences afin d'éviter de considérer comme nouvelles des alertes simplement déplacées dans le fichier à cause de changements de numéros de ligne.
+
+Si de nouvelles alertes apparaissent, le script retourne un code de sortie non nul. GitHub Actions considère alors le contrôle comme échoué, ce qui permet de signaler automatiquement l'introduction de vulnérabilités.
+
+## 3.2 Introduction de sept catégories de vulnérabilités
+
+Nous avons ajouté sept fichiers Java dans le répertoire :
+
+`tika-core/src/main/java/org/apache/tika/securitydemo/`
+
+Ces fichiers contiennent volontairement des pratiques non sécuritaires à des fins pédagogiques. Ils ne sont pas destinés à une utilisation en production.
+
+### Vulnérabilité 1 — Exécution de commandes potentiellement dangereuses
+
+- Fichier : `CommandInjectionDemo.java`
+- Type : utilisation dangereuse de commandes système.
+- Explication : une commande est construite à partir d'une entrée externe avant d'être transmise à `ProcessBuilder`. Cette pratique peut devenir dangereuse si les données ne sont pas contrôlées, notamment lorsqu'un interpréteur de commandes est utilisé.
+- Règle Semgrep : `java.lang.security.audit.command-injection-process-builder.command-injection-process-builder`
+- Résultat : 1 nouvelle alerte.
+
+### Vulnérabilité 2 — Vérification TLS insuffisante
+
+- Fichier : `InsecureHostnameVerifierDemo.java`
+- Type : contournement de la vérification du nom d'hôte.
+- Explication : le vérificateur accepte systématiquement le nom d'hôte présenté par le serveur. Cela peut permettre d'accepter un certificat associé à un serveur différent de celui attendu.
+- Règles Semgrep :
+  - `java.lang.security.audit.crypto.ssl.insecure-hostname-verifier.insecure-hostname-verifier`
+  - `problem-based-packs.insecure-transport.java-spring.bypass-tls-verification.bypass-tls-verification`
+- Résultat : 2 nouvelles alertes.
+
+### Vulnérabilité 3 — Communication réseau non chiffrée
+
+- Fichier : `UnencryptedSocketDemo.java`
+- Type : utilisation d'une connexion réseau sans chiffrement.
+- Explication : l'utilisation d'un socket TCP classique ne garantit pas la confidentialité des données transmises. Sans mécanisme de chiffrement supplémentaire, ces données peuvent être interceptées.
+- Règle Semgrep : `java.lang.security.audit.crypto.unencrypted-socket.unencrypted-socket`
+- Résultat : 1 nouvelle alerte.
+
+### Vulnérabilité 4 — Mode de chiffrement AES-ECB
+
+- Fichier : `WeakEncryptionDemo.java`
+- Type : utilisation d'un mode de chiffrement non recommandé.
+- Explication : le mode ECB chiffre indépendamment les blocs identiques, ce qui peut révéler des structures dans les données.
+- Règle Semgrep : `java.lang.security.audit.crypto.use-of-aes-ecb.use-of-aes-ecb`
+- Résultat : 1 nouvelle alerte.
+
+### Vulnérabilité 5 — Algorithme de hachage SHA-1
+
+- Fichier : `WeakHashDemo.java`
+- Type : utilisation d'un algorithme de hachage cryptographique affaibli.
+- Explication : SHA-1 présente des faiblesses connues en matière de résistance aux collisions et ne convient plus aux usages exigeant cette propriété de sécurité.
+- Règle Semgrep : `java.lang.security.audit.crypto.use-of-sha1.use-of-sha1`
+- Résultat : 1 nouvelle alerte.
+
+### Vulnérabilité 6 — Injection SQL
+
+- Fichier : `SQLInjectionDemo.java`
+- Type : construction d'une requête SQL par concaténation.
+- Explication : une entrée utilisateur est incorporée directement dans une requête SQL. Un attaquant pourrait modifier la structure de la requête si cette entrée n'est pas correctement traitée.
+- Règles Semgrep :
+  - `java.lang.security.audit.formatted-sql-string.formatted-sql-string`
+  - `java.lang.security.audit.sqli.jdbc-sqli.jdbc-sqli`
+- Résultat : 2 nouvelles alertes.
+
+### Vulnérabilité 7 — Analyse XML non sécurisée (XXE)
+
+- Fichier : `XXEDemo.java`
+- Type : XML External Entity (XXE).
+- Explication : un parseur XML est créé sans désactiver explicitement les constructions XML dangereuses. Selon sa configuration, un document malveillant pourrait provoquer la résolution d'entités externes.
+- Règle Semgrep : `java.lang.security.audit.xxe.documentbuilderfactory-disallow-doctype-decl-missing.documentbuilderfactory-disallow-doctype-decl-missing`
+- Résultat : 1 nouvelle alerte.
+
+## 3.3 Comparaison des résultats Semgrep
+
+Nous avons effectué une analyse avant l'introduction des vulnérabilités, puis une nouvelle analyse après leur ajout.
+
+| Indicateur | Résultat |
+|---|---:|
+| Alertes initiales | 83 |
+| Alertes après modification | 92 |
+| Nouvelles alertes | 9 |
+| Fichiers Java de démonstration | 7 |
+
+Les neuf nouvelles alertes correspondent aux sept catégories de vulnérabilités introduites. Deux fichiers déclenchent chacun deux règles Semgrep distinctes.
+
+La commande de validation utilisée est :
+
+```bash
+python3 scripts/compare_semgrep.py semgrep-avant.json semgrep-apres-final.json
+```
+
+### Résultat de la comparaison
+
+- Alertes initiales : **83**
+- Alertes finales : **92**
+- Nouvelles alertes : **9**
+
+Le script retourne un code de sortie 1 lorsqu'il détecte
+de nouvelles vulnérabilités.
+
+## 3.4 Validation sur GitHub Actions
+
+La pull request #17 a été créée dans le dépôt bbroux/tika :
+https://github.com/bbroux/tika/pull/17
+
+Le workflow Semgrep compare le code de référence au code modifié.
+
+La première exécution a rencontré une erreur Git
+« dubious ownership », corrigée avec safe.directory.
+
+Après correction, GitHub Actions a confirmé :
+- 83 alertes de référence ;
+- 92 alertes actuelles ;
+- 9 nouvelles alertes ;
+- un échec du contrôle avec le code de sortie 1.
+
+Cela démontre que le workflow bloque les nouvelles alertes.
+
+
+## 3.5 Action réutilisable Rickroll
+
+Nous avons créé une action composite réutilisable dans
+`.github/actions/rickroll/action.yml`.
+
+Cette action affiche un message humoristique et un lien
+vers la vidéo « Never Gonna Give You Up ».
+
+Elle est intégrée au workflow
+`.github/workflows/main-jdk17-build.yml`,
+dans les jobs de compilation et de tests E2E.
+
+Sur GitHub Actions, les étapes suivantes ont réussi :
+- `Rickroll if build tests fail`
+- `Never Gonna Give You Up`
+
+L'action est donc correctement intégrée et exécutable.
+
+Cependant, l'échec Maven observé provenait du contrôle
+Apache RAT et non d'un test unitaire. Le déclenchement
+après un échec de test reste à valider spécifiquement.
+
+## 3.6 Compilation et problème préexistant
+
+La compilation locale du module tika-core a réussi avec :
+
+`mvn -pl tika-core -am compile -DskipTests -q`
+
+Sur GitHub Actions, le build complet a échoué au contrôle
+Apache RAT à cause du fichier `tika-core/README.md`.
+
+Ce fichier contient le rapport de la tâche 2 et ne possède
+pas l'en-tête de licence Apache attendu.
+
+Nous avons vérifié que ce fichier était déjà présent sur
+la branche main et qu'il était identique dans notre branche.
+
+Nous avons choisi de le conserver sans modification.
+
+## 3.7 Conclusion
+
+Nous avons intégré un contrôle de sécurité automatisé
+au projet Apache Tika.
+
+Sept catégories de vulnérabilités ont été introduites,
+produisant neuf nouvelles alertes Semgrep.
+
+La comparaison avant/après et le blocage automatique
+ont été validés sur GitHub Actions.
+
+Nous avons également créé une action Rickroll réutilisable
+et confirmé son exécution.
+
+Ces vulnérabilités sont intentionnelles et servent
+exclusivement à la démonstration pédagogique
+dans le cadre du cours IFT3913.
