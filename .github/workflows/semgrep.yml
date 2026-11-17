@@ -22,6 +22,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Autoriser le repertoire Git dans le conteneur
+        shell: bash
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Determiner la revision de reference
         shell: bash
         env:
