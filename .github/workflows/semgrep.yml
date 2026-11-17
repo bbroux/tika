@@ -1,26 +1,58 @@
+name: Semgrep - nouvelles vulnerabilites
+
 on:
-  workflow_dispatch: {}
-  pull_request: {}
+  pull_request:
   push:
-    branches:
-    - main
-    - master
-    paths:
-    - .github/workflows/semgrep.yml
-  schedule:
-  # random HH:MM to avoid a load spike on GitHub Actions at 00:00
-  - cron: 3 17 * * *
-name: Semgrep
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   semgrep:
-    name: semgrep/ci
+    name: Detecter les nouvelles vulnerabilites
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep:1.185.0
+
     steps:
-    - uses: actions/checkout@v6
-    - run: semgrep ci --allow-local-builds
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determiner la revision de reference
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE_SHA"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            BASE="$PUSH_BEFORE_SHA"
+          else
+            BASE="$(git rev-parse HEAD^)"
+          fi
+          git cat-file -e "$BASE^{commit}"
+          echo "BASE_SHA=$BASE" >> "$GITHUB_ENV"
+
+      - name: Analyser le code actuel
+        shell: bash
+        run: semgrep scan --config auto --json --output /tmp/semgrep-apres.json
+
+      - name: Analyser le code de reference
+        shell: bash
+        run: |
+          git worktree add --detach /tmp/tika-semgrep-base "$BASE_SHA"
+          cd /tmp/tika-semgrep-base
+          semgrep scan --config auto --json --output /tmp/semgrep-avant.json
+
+      - name: Bloquer les nouvelles vulnerabilites
+        shell: bash
+        run: |
+          python3 scripts/compare_semgrep.py \
+            /tmp/semgrep-avant.json \
+            /tmp/semgrep-apres.json

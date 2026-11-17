@@ -1,0 +1,12 @@
+name: "Rickroll on test failure"
+description: "Affiche un rickroll lorsqu'un test échoue"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Never Gonna Give You Up
+      shell: bash
+      run: |
+        echo "Un test a échoué !"
+        echo "Never gonna give you up, never gonna let you down..."
+        echo "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
